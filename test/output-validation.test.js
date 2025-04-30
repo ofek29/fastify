@@ -1,7 +1,6 @@
 'use strict'
 
-const t = require('tap')
-const test = t.test
+const { test } = require('node:test')
 const sget = require('simple-get').concat
 const fastify = require('..')()
 
@@ -34,9 +33,9 @@ test('shorthand - output string', t => {
     fastify.get('/string', opts, function (req, reply) {
       reply.code(200).send({ hello: 'world' })
     })
-    t.pass()
+    t.assert.ok(true)
   } catch (e) {
-    t.fail()
+    t.assert.fail()
   }
 })
 
@@ -46,9 +45,9 @@ test('shorthand - output number', t => {
     fastify.get('/number', opts, function (req, reply) {
       reply.code(201).send({ hello: 55 })
     })
-    t.pass()
+    t.assert.ok(true)
   } catch (e) {
-    t.fail()
+    t.assert.fail()
   }
 })
 
@@ -59,9 +58,9 @@ test('wrong object for schema - output', t => {
       // will send { }
       reply.code(201).send({ hello: 'world' })
     })
-    t.pass()
+    t.assert.ok(true)
   } catch (e) {
-    t.fail()
+    t.assert.fail()
   }
 })
 
@@ -72,9 +71,9 @@ test('empty response', t => {
     fastify.get('/empty', opts, function (req, reply) {
       reply.code(204).send()
     })
-    t.pass()
+    t.assert.ok(true)
   } catch (e) {
-    t.fail()
+    t.assert.fail()
   }
 })
 
@@ -84,80 +83,95 @@ test('unlisted response code', t => {
     fastify.get('/400', opts, function (req, reply) {
       reply.code(400).send({ hello: 'DOOM' })
     })
-    t.pass()
+    t.assert.ok(true)
   } catch (e) {
-    t.fail()
+    t.assert.fail()
   }
 })
 
-fastify.listen({ port: 0 }, err => {
-  t.error(err)
-  t.teardown(() => { fastify.close() })
+test('server response', async (t) => {
+  await fastify.listen({ port: 0 })
+  t.after(() => { fastify.close() })
 
-  test('shorthand - string get ok', t => {
+  await t.test('shorthand - string get ok', async (t) => {
     t.plan(4)
-    sget({
-      method: 'GET',
-      url: 'http://localhost:' + fastify.server.address().port + '/string'
-    }, (err, response, body) => {
-      t.error(err)
-      t.equal(response.statusCode, 200)
-      t.equal(response.headers['content-length'], '' + body.length)
-      t.same(JSON.parse(body), { hello: 'world' })
-    })
-  })
-
-  test('shorthand - number get ok', t => {
-    t.plan(4)
-    sget({
-      method: 'GET',
-      url: 'http://localhost:' + fastify.server.address().port + '/number'
-    }, (err, response, body) => {
-      t.error(err)
-      t.equal(response.statusCode, 201)
-      t.equal(response.headers['content-length'], '' + body.length)
-      t.same(JSON.parse(body), { hello: 55 })
-    })
-  })
-
-  test('shorthand - wrong-object-for-schema', t => {
-    t.plan(4)
-    sget({
-      method: 'GET',
-      url: 'http://localhost:' + fastify.server.address().port + '/wrong-object-for-schema'
-    }, (err, response, body) => {
-      t.error(err)
-      t.equal(response.statusCode, 500)
-      t.equal(response.headers['content-length'], '' + body.length)
-      t.same(JSON.parse(body), {
-        statusCode: 500,
-        error: 'Internal Server Error',
-        message: 'The value "world" cannot be converted to a number.'
+    await new Promise((resolve, reject) => {
+      sget({
+        method: 'GET',
+        url: 'http://localhost:' + fastify.server.address().port + '/string'
+      }, (err, response, body) => {
+        t.assert.ifError(err)
+        t.assert.strictEqual(response.statusCode, 200)
+        t.assert.strictEqual(response.headers['content-length'], '' + body.length)
+        t.assert.deepStrictEqual(JSON.parse(body), { hello: 'world' })
+        resolve()
       })
     })
   })
 
-  test('shorthand - empty', t => {
-    t.plan(2)
-    sget({
-      method: 'GET',
-      url: 'http://localhost:' + fastify.server.address().port + '/empty'
-    }, (err, response, body) => {
-      t.error(err)
-      t.equal(response.statusCode, 204)
+  await t.test('shorthand - number get ok', async (t) => {
+    t.plan(4)
+    await new Promise((resolve, reject) => {
+      sget({
+        method: 'GET',
+        url: 'http://localhost:' + fastify.server.address().port + '/number'
+      }, (err, response, body) => {
+        t.assert.ifError(err)
+        t.assert.strictEqual(response.statusCode, 201)
+        t.assert.strictEqual(response.headers['content-length'], '' + body.length)
+        t.assert.deepStrictEqual(JSON.parse(body), { hello: 55 })
+        resolve()
+      })
     })
   })
 
-  test('shorthand - 400', t => {
+  await t.test('shorthand - wrong-object-for-schema', async (t) => {
     t.plan(4)
-    sget({
-      method: 'GET',
-      url: 'http://localhost:' + fastify.server.address().port + '/400'
-    }, (err, response, body) => {
-      t.error(err)
-      t.equal(response.statusCode, 400)
-      t.equal(response.headers['content-length'], '' + body.length)
-      t.same(JSON.parse(body), { hello: 'DOOM' })
+    await new Promise((resolve, reject) => {
+      sget({
+        method: 'GET',
+        url: 'http://localhost:' + fastify.server.address().port + '/wrong-object-for-schema'
+      }, (err, response, body) => {
+        t.assert.ifError(err)
+        t.assert.strictEqual(response.statusCode, 500)
+        t.assert.strictEqual(response.headers['content-length'], '' + body.length)
+        t.assert.deepStrictEqual(JSON.parse(body), {
+          statusCode: 500,
+          error: 'Internal Server Error',
+          message: 'The value "world" cannot be converted to a number.'
+        })
+        resolve()
+      })
+    })
+  })
+
+  await t.test('shorthand - empty', async (t) => {
+    t.plan(2)
+    await new Promise((resolve, reject) => {
+      sget({
+        method: 'GET',
+        url: 'http://localhost:' + fastify.server.address().port + '/empty'
+      }, (err, response, body) => {
+        t.assert.ifError(err)
+        t.assert.strictEqual(response.statusCode, 204)
+        resolve()
+      })
+    })
+  })
+
+  await t.test('shorthand - 400', async (t) => {
+    t.plan(4)
+    await new Promise((resolve, reject) => {
+      sget({
+        method: 'GET',
+        url: 'http://localhost:' + fastify.server.address().port + '/400'
+      }, (err, response, body) => {
+        t.assert.ifError(err)
+        t.assert.strictEqual(response.statusCode, 400)
+        t.assert.strictEqual(response.headers['content-length'], '' + body.length)
+        t.assert.deepStrictEqual(JSON.parse(body), { hello: 'DOOM' })
+        resolve()
+      })
     })
   })
 })
